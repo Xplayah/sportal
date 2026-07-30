@@ -332,6 +332,8 @@
             console.error("Firebase falló:", error);
             baseDeDatosActiva = false;
         }
+    } else {
+        console.warn("Estás en modo local. Las reservas se guardarán temporalmente en tu computadora hasta que lo subas a GitHub.");
     }
 
     function mostrarPantalla(tipo) {
@@ -504,7 +506,6 @@
         });
     }
 
-    // Funciones de la ventana emergente Modal para el Voucher
     function verVoucherDetalle(ident) {
         let datos = obtenerDatos();
         let res = null;
@@ -529,6 +530,19 @@
 
     function enviarReserva(e) {
         e.preventDefault();
+
+        // --- SISTEMA ANTI-SPAM (COOLDOWN DE 5 MINUTOS) ---
+        let tiempoActual = Date.now();
+        let ultimaReserva = localStorage.getItem('sportal_ultima_reserva');
+        
+        // 300000 milisegundos = 5 minutos
+        if (ultimaReserva && (tiempoActual - ultimaReserva < 300000)) {
+            let minutosRestantes = Math.ceil((300000 - (tiempoActual - ultimaReserva)) / 60000);
+            alert(`⏳ Por seguridad anti-spam, debes esperar ${minutosRestantes} minuto(s) antes de hacer otra reserva.`);
+            return; // Corta la función aquí, no lo deja avanzar
+        }
+        // -------------------------------------------------
+
         let btn = document.querySelector('button[type="submit"]');
         let nombre = document.getElementById('nombre').value;
         let telefono = document.getElementById('telefono').value;
@@ -565,7 +579,8 @@
 
                 if (baseDeDatosActiva) {
                     db.collection("reservas").add(nuevaReserva).then(function() {
-                        alert('¡Reserva enviada exitosamente!');
+                        localStorage.setItem('sportal_ultima_reserva', Date.now());
+                        alert('¡Reserva enviada exitosamente a la nube!');
                         document.getElementById('formReserva').reset();
                         volverInicio();
                         btn.textContent = "Enviar Reserva";
@@ -579,6 +594,7 @@
                     let reservas = JSON.parse(localStorage.getItem('sportal_reservas') || '[]');
                     reservas.push(nuevaReserva);
                     localStorage.setItem('sportal_reservas', JSON.stringify(reservas));
+                    localStorage.setItem('sportal_ultima_reserva', Date.now());
                     alert('¡Reserva guardada temporalmente (Modo Local)!');
                     document.getElementById('formReserva').reset();
                     volverInicio();
