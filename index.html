@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportal - Sistema de Reservas</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --border-color: #334155;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 680px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        h1, h2 { text-align: center; color: var(--accent-color); }
+        .logo-container { text-align: center; margin-bottom: 15px; }
+        .logo-container img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-group { display: flex; gap: 15px; justify-content: center; margin: 20px 0; }
+        .btn {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-secondary { background-color: #475569; color: #fff; }
+        .btn-secondary:hover { background-color: #64748b; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .hidden { display: none !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        th, td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
+        th { background-color: #0f172a; }
+        .qr-section { text-align: center; margin-top: 15px; background: #111827; padding: 15px; border-radius: 8px; }
+        .qr-section img { max-width: 180px; height: auto; border-radius: 6px; border: 2px solid white; }
+        
+        .horarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #0f172a;
+        }
+        .slot-hora {
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .slot-libre { background-color: var(--success-color); color: #fff; }
+        .slot-libre:hover { opacity: 0.8; }
+        .slot-pendiente { background-color: var(--warning-color); color: #0f172a; cursor: not-allowed; }
+        .slot-ocupado { background-color: var(--danger-color); color: #fff; cursor: not-allowed; }
+        .slot-bloqueado { background-color: #64748b; color: #cbd5e1; cursor: not-allowed; }
+        .slot-seleccionado { border: 2px solid #fff; transform: scale(1.03); }
+        
+        .leyenda {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            margin-top: 8px;
+            justify-content: center;
+            color: #94a3b8;
+            flex-wrap: wrap;
+        }
+        .punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-container">
+        <img src="logo_final_sportal.png" alt="Logo Sportal" onerror="this.src='https://via.placeholder.com/100?text=Sportal'">
+        <h1>Sportal Reservas</h1>
+    </div>
+
+    <div id="pantalla-inicio">
+        <h2>Bienvenido</h2>
+        <p style="text-align: center; color: #94a3b8;">Selecciona una opción para continuar:</p>
+        <div class="btn-group">
+            <button class="btn" onclick="mostrarPantalla('reserva')">Reservar Cancha</button>
+            <button class="btn btn-secondary" onclick="intentarEntrarAdmin()">Administrador</button>
+        </div>
+    </div>
+
+    <div id="pantalla-reserva" class="hidden">
+        <h2>Nueva Reserva</h2>
+        <form id="formReserva" onsubmit="enviarReserva(event)">
+            <div class="form-group">
+                <label>Nombre y Apellido:</label>
+                <input type="text" id="nombre" required placeholder="Ej. Juan Pérez">
+            </div>
+
+            <div class="form-group">
+                <label>Número de Teléfono / WhatsApp:</label>
+                <input type="tel" id="telefono" required placeholder="Ej. 987654321">
+            </div>
+            
+            <div class="form-group">
+                <label>Deporte:</label>
+                <select id="deporte" required onchange="generarGrillaHorarios()">
+                    <option value="">Seleccione un deporte</option>
+                    <option value="Fútbol">Fútbol</option>
+                    <option value="Vóley">Vóley</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Día:</label>
+                <select id="dia" required onchange="generarGrillaHorarios()">
+                    <option value="">Seleccione el día</option>
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miércoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Duración del tiempo:</label>
+                <select id="duracion" required onchange="calcularPrecios()">
+                    <option value="">Seleccione duración</option>
+                    <option value="1">1 Hora (S/ 50)</option>
+                    <option value="1.5">1 Hora y Media (S/ 60)</option>
+                    <option value="2">2 Horas (S/ 90)</option>
+                </select>
+            </div>
+
+            <div id="resumen-precio" style="background: #111827; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; display:none;">
+                <p id="txtTotal" style="margin: 0; font-weight: bold;"></p>
+                <p id="txtAdelanto" style="margin: 5px 0 0 0; color: var(--warning-color); font-weight: bold;"></p>
+            </div>
+
+            <div class="form-group">
+                <label>Selecciona tu Horario de Inicio:</label>
+                <div id="grillaHorarios" class="horarios-grid">
+                    <span style="color: #64748b; grid-column: span 2; text-align: center;">Seleccione deporte, día y duración primero</span>
+                </div>
+                <div class="leyenda">
+                    <span><span class="punto" style="background:var(--success-color)"></span>Disponible</span>
+                    <span><span class="punto" style="background:var(--warning-color)"></span>Pendiente</span>
+                    <span><span class="punto" style="background:var(--danger-color)"></span>Ocupado</span>
+                    <span><span class="punto" style="background:#64748b"></span>Bloqueado</span>
+                </div>
+                <input type="hidden" id="horaSeleccionada" required>
+            </div>
+
+            <div class="qr-section">
+                <p><strong>Paga el 50% de adelanto con Yape / Plin:</strong></p>
+                <img src="qr_pago.png" alt="Código QR Yape/Plin" onerror="this.src='https://via.placeholder.com/150?text=Sube+qr_pago.png'">
+                <p style="font-size: 13px; color: #cbd5e1; margin-top: 5px;">Adjunta la captura de tu voucher del adelanto:</p>
+            </div>
+
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Comprobante de Pago (Voucher - Imagen ligera):</label>
+                <input type="file" id="voucher" accept="image/*" required>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn">Enviar Reserva</button>
+                <button type="button" class="btn btn-secondary" onclick="volverInicio()">Volver</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="pantalla-admin" class="hidden">
+        <h2>Panel de Administrador</h2>
+        
+        <div style="background: #111827; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+            <p style="margin: 0 0 8px 0; font-weight: bold; color: var(--accent-color);">Bloquear / Desbloquear Horarios por Día:</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <select id="adminDeporte" style="flex: 1;" onchange="cargarGrillaAdmin()">
+                    <option value="Fútbol">Fútbol</option>
+                    <option value="Vóley">Vóley</option>
+                </select>
+                <select id="adminDia" style="flex: 1;" onchange="cargarGrillaAdmin()">
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miércoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                </select>
+            </div>
+            <div id="grillaAdminHorarios" class="horarios-grid" style="margin-top: 10px;"></div>
+            <p style="font-size: 11px; color: #94a3b8; margin: 5px 0 0 0; text-align: center;">Haz clic en cualquier hora para bloquearla o liberarla.</p>
+        </div>
+
+        <p>Listado de Solicitudes y Teléfonos:</p>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente / Teléfono</th>
+                        <th>Deporte</th>
+                        <th>Día y Hora</th>
+                        <th>Estado / Voucher</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaAdmin"></tbody>
+            </table>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn btn-secondary" onclick="volverInicio()">Cerrar Sesión / Volver</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script>
+    // Tu configuración oficial de Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyBkjnbA_s9PhcL5KZ8MZrChL7-Snsx5QuQ",
+        authDomain: "sportalreservas.firebaseapp.com",
+        projectId: "sportalreservas",
+        storageBucket: "sportalreservas.firebasestorage.app",
+        messagingSenderId: "14937539841",
+        appId: "1:14937539841:web:956dab26ca06c575dfc700"
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let horaElegidaGlobal = "";
+    let datosNube = []; 
+
+    // ESCUCHADOR EN TIEMPO REAL
+    db.collection("reservas").onSnapshot((snapshot) => {
+        datosNube = [];
+        snapshot.forEach((doc) => {
+            let data = doc.data();
+            data.id = doc.id;
+            datosNube.push(data);
+        });
+        
+        // Refrescar pantallas
+        if (!document.getElementById('pantalla-reserva').classList.contains('hidden')) {
+            generarGrillaHorarios();
+        }
+        if (!document.getElementById('pantalla-admin').classList.contains('hidden')) {
+            cargarGrillaAdmin();
+            cargarReservasAdmin();
+        }
+    });
+
+    // FUNCIONES GLOBALES
+    function mostrarPantalla(tipo) {
+        document.getElementById('pantalla-inicio').classList.add('hidden');
+        document.getElementById('pantalla-reserva').classList.add('hidden');
+        document.getElementById('pantalla-admin').classList.add('hidden');
+
+        if(tipo === 'reserva') {
+            document.getElementById('pantalla-reserva').classList.remove('hidden');
+        } else if(tipo === 'admin') {
+            document.getElementById('pantalla-admin').classList.remove('hidden');
+            cargarGrillaAdmin();
+            cargarReservasAdmin();
+        } else {
+            document.getElementById('pantalla-inicio').classList.remove('hidden');
+        }
+    }
+
+    function volverInicio() { mostrarPantalla('inicio'); }
+
+    function intentarEntrarAdmin() {
+        let clave = prompt("Introduce la contraseña de Administrador:");
+        if (clave === "sportal2026") {
+            mostrarPantalla('admin');
+        } else if (clave !== null) {
+            alert("Contraseña incorrecta.");
+        }
+    }
+
+    function calcularPrecios() {
+        let duracion = document.getElementById('duracion').value;
+        let resumen = document.getElementById('resumen-precio');
+        if(!duracion) { resumen.style.display = 'none'; return; }
+        let total = (duracion === "1") ? 50 : ((duracion === "1.5") ? 60 : 90);
+        let adelanto = total / 2;
+        document.getElementById('txtTotal').textContent = `Precio Total: S/ ${total}.00`;
+        document.getElementById('txtAdelanto').textContent = `Adelanto requerido (50%): S/ ${adelanto}.00`;
+        resumen.style.display = 'block';
+    }
+
+    function obtenerLimitesHorarios(dia, deporte) {
+        let esFinDeSemana = (dia === 'Sábado' || dia === 'Domingo');
+        if (esFinDeSemana) {
+            if (deporte === 'Fútbol') return { inicio: 8, fin: 24 }; 
+            else return { inicio: 16, fin: 24 }; 
+        } else {
+            if (deporte === 'Fútbol') return { inicio: 19, fin: 24 }; 
+            else return { inicio: 21.5, fin: 24 }; 
+        }
+    }
+
+    function convertirDecimalAHora(decimal) {
+        let h = Math.floor(decimal);
+        let m = (decimal % 1 === 0.5) ? '30' : '00';
+        if (h >= 24) h = h - 24;
+        let horaFormateada = h < 10 ? '0' + h : h;
+        return `${horaFormateada}:${m}`;
+    }
+
+    function generarGrillaHorarios() {
+        let deporte = document.getElementById('deporte').value;
+        let dia = document.getElementById('dia').value;
+        let grilla = document.getElementById('grillaHorarios');
+        grilla.innerHTML = '';
+        horaElegidaGlobal = "";
+        document.getElementById('horaSeleccionada').value = "";
+
+        if(!deporte || !dia) {
+            grilla.innerHTML = '<span style="color: #64748b; grid-column: span 2; text-align: center;">Seleccione deporte y día primero</span>';
+            return;
+        }
+
+        let limites = obtenerLimitesHorarios(dia, deporte);
+
+        for (let t = limites.inicio; t < limites.fin; t += 0.5) {
+            let hInicio = convertirDecimalAHora(t);
+            let bloqueStr = `${dia} - ${deporte} - ${hInicio}`;
+            
+            let estado = "libre";
+            let reservaMatch = datosNube.find(r => r.diaDeporteHora === bloqueStr);
+            
+            if(reservaMatch) {
+                if(reservaMatch.estado === 'aceptado') estado = "ocupado";
+                else if(reservaMatch.estado === 'pendiente') estado = "pendiente";
+                else if(reservaMatch.estado === 'bloqueado') estado = "bloqueado";
+            }
+
+            let div = document.createElement('div');
+            div.className = `slot-hora slot-${estado}`;
+            div.textContent = hInicio;
+
+            if(estado === "libre") {
+                div.onclick = function() {
+                    document.querySelectorAll('#grillaHorarios .slot-hora').forEach(s => s.classList.remove('slot-seleccionado'));
+                    div.classList.add('slot-seleccionado');
+                    horaElegidaGlobal = hInicio;
+                    document.getElementById('horaSeleccionada').value = hInicio;
+                };
+            }
+            grilla.appendChild(div);
+        }
+    }
+
+    function cargarGrillaAdmin() {
+        let deporte = document.getElementById('adminDeporte').value;
+        let dia = document.getElementById('adminDia').value;
+        let grilla = document.getElementById('grillaAdminHorarios');
+        grilla.innerHTML = '';
+
+        let limites = obtenerLimitesHorarios(dia, deporte);
+
+        for (let t = limites.inicio; t < limites.fin; t += 0.5) {
+            let hInicio = convertirDecimalAHora(t);
+            let bloqueStr = `${dia} - ${deporte} - ${hInicio}`;
+            
+            let reservaMatch = datosNube.find(r => r.diaDeporteHora === bloqueStr);
+            let estado = reservaMatch ? reservaMatch.estado : "libre";
+
+            let div = document.createElement('div');
+            div.className = `slot-hora slot-${estado === 'aceptado' ? 'ocupado' : estado}`;
+            div.textContent = `${hInicio} (${estado})`;
+
+            div.onclick = function() {
+                toggleBloqueoAdmin(dia, deporte, hInicio);
+            };
+            grilla.appendChild(div);
+        }
+    }
+
+    function enviarReserva(e) {
+        e.preventDefault();
+        let btn = document.querySelector('button[type="submit"]');
+        let nombre = document.getElementById('nombre').value;
+        let telefono = document.getElementById('telefono').value;
+        let deporte = document.getElementById('deporte').value;
+        let dia = document.getElementById('dia').value;
+        let duracion = document.getElementById('duracion').value;
+        let hora = document.getElementById('horaSeleccionada').value;
+        let fileInput = document.getElementById('voucher');
+
+        if(!hora) { alert('Por favor selecciona un horario disponible en la grilla.'); return; }
+
+        if(fileInput.files && fileInput.files[0]) {
+            btn.textContent = "Procesando...";
+            btn.disabled = true;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                db.collection("reservas").add({
+                    nombre: nombre,
+                    telefono: telefono,
+                    deporte: deporte,
+                    diaDeporteHora: `${dia} - ${deporte} - ${hora}`,
+                    duracion: `${duracion} hora(s)`,
+                    voucher: e.target.result,
+                    estado: 'pendiente'
+                }).then(() => {
+                    alert('¡Reserva enviada con éxito! Está pendiente de aprobación.');
+                    document.getElementById('formReserva').reset();
+                    volverInicio();
+                    btn.textContent = "Enviar Reserva";
+                    btn.disabled = false;
+                }).catch((error) => {
+                    alert('Hubo un error. Revisa tu internet o los permisos de Firebase.');
+                    console.error(error);
+                    btn.textContent = "Enviar Reserva";
+                    btn.disabled = false;
+                });
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+    }
+
+    function toggleBloqueoAdmin(dia, deporte, hora) {
+        let bloqueStr = `${dia} - ${deporte} - ${hora}`;
+        let reservaMatch = datosNube.find(r => r.diaDeporteHora === bloqueStr);
+
+        if(reservaMatch) {
+            db.collection("reservas").doc(reservaMatch.id).delete();
+        } else {
+            db.collection("reservas").add({
+                nombre: "BLOQUEADO (Admin)",
+                telefono: "-",
+                deporte: deporte,
+                diaDeporteHora: bloqueStr,
+                duracion: "1 hora",
+                voucher: "",
+                estado: 'bloqueado'
+            });
+        }
+    }
+
+    function cargarReservasAdmin() {
+        let tbody = document.getElementById('tablaAdmin');
+        tbody.innerHTML = '';
+        
+        if(datosNube.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay registros en la nube.</td></tr>';
+            return;
+        }
+
+        datosNube.forEach((res) => {
+            let colorEstado = res.estado === 'aceptado' ? 'var(--success-color)' : (res.estado === 'bloqueado' ? '#64748b' : 'var(--warning-color)');
+            let voucherHtml = res.voucher ? `<a href="${res.voucher}" target="_blank" style="color: var(--accent-color);">Ver Voucher</a>` : 'Bloqueo Manual';
+
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${res.nombre}</strong><br><span style="color: #38bdf8;">📞 ${res.telefono || 'N/A'}</span></td>
+                <td>${res.deporte}</td>
+                <td>${res.diaDeporteHora}</td>
+                <td><span style="color: ${colorEstado}; font-weight:bold; text-transform:uppercase;">${res.estado}</span><br>${voucherHtml}</td>
+                <td>
+                    ${res.estado === 'pendiente' ? `<button class="btn" style="padding: 4px 8px; font-size: 11px; background: var(--success-color); color:white; margin-bottom:4px;" onclick="cambiarEstado('${res.id}', 'aceptado')">Aceptar</button>` : ''}
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; background-color: var(--danger-color); color: white;" onclick="eliminarReserva('${res.id}')">Eliminar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function cambiarEstado(idFirebase, nuevoEstado) {
+        db.collection("reservas").doc(idFirebase).update({ estado: nuevoEstado });
+    }
+
+    function eliminarReserva(idFirebase) {
+        if(confirm("¿Seguro que deseas eliminar esto permanentemente?")) {
+            db.collection("reservas").doc(idFirebase).delete();
+        }
+    }
+</script>
+
+</body>
+</html>
