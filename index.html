@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sportal - Reservas en Línea</title>
+    <style>
+        body { background-color: #0f172a; color: white; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { color: #38bdf8; text-align: center; margin-bottom: 20px; }
+        label { display: block; margin-top: 15px; color: #94a3b8; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; background: #22c55e; color: white; padding: 12px; border: none; border-radius: 6px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        button:hover { background: #16a34a; }
+        #mensaje { text-align: center; margin-top: 15px; font-weight: bold; color: #22c55e; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Sportal ⚽</h1>
+        <form id="formReserva">
+            <label>Tu Nombre:</label>
+            <input type="text" id="nombre" required placeholder="Ej. Carlos">
+
+            <label>Elige la Cancha:</label>
+            <select id="cancha">
+                <option value="Cancha 1">Cancha Sintética 1</option>
+                <option value="Cancha 2">Cancha de Losa 2</option>
+            </select>
+
+            <label>Fecha y Hora:</label>
+            <input type="datetime-local" id="fecha" required>
+
+            <button type="submit">Separar Reserva</button>
+        </form>
+        <p id="mensaje"></p>
+    </div>
+
+    <script>
+        const form = document.getElementById('formReserva');
+        const mensaje = document.getElementById('mensaje');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const nombre = document.getElementById('nombre').value;
+            const cancha = document.getElementById('cancha').value;
+            
+            mensaje.textContent = `¡Listo ${nombre}! Tu reserva en la ${cancha} fue registrada con éxito.`;
+            form.reset();
+        });
+    </script>
+</body>
+</html>
