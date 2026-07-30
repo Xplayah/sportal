@@ -123,8 +123,8 @@
         <h2>Bienvenido</h2>
         <p style="text-align: center; color: #94a3b8;">Selecciona una opción para continuar:</p>
         <div class="btn-group">
-            <button class="btn" onclick="mostrarPantalla('reserva')">Reservar Cancha</button>
-            <button class="btn btn-secondary" onclick="intentarEntrarAdmin()">Administrador</button>
+            <button type="button" class="btn" onclick="mostrarPantalla('reserva')">Reservar Cancha</button>
+            <button type="button" class="btn btn-secondary" onclick="intentarEntrarAdmin()">Administrador</button>
         </div>
     </div>
 
@@ -200,7 +200,7 @@
             </div>
 
             <div class="form-group" style="margin-top: 15px;">
-                <label>Comprobante de Pago (Voucher - Imagen ligera):</label>
+                <label>Comprobante de Pago (Voucher):</label>
                 <input type="file" id="voucher" accept="image/*" required>
             </div>
 
@@ -251,52 +251,16 @@
             </table>
         </div>
         <div style="text-align: center; margin-top: 20px;">
-            <button class="btn btn-secondary" onclick="volverInicio()">Cerrar Sesión / Volver</button>
+            <button type="button" class="btn btn-secondary" onclick="volverInicio()">Cerrar Sesión / Volver</button>
         </div>
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
 <script>
-    // Tu configuración oficial de Firebase
-    const firebaseConfig = {
-        apiKey: "AIzaSyBkjnbA_s9PhcL5KZ8MZrChL7-Snsx5QuQ",
-        authDomain: "sportalreservas.firebaseapp.com",
-        projectId: "sportalreservas",
-        storageBucket: "sportalreservas.firebasestorage.app",
-        messagingSenderId: "14937539841",
-        appId: "1:14937539841:web:956dab26ca06c575dfc700"
-    };
-
-    // Inicializar Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     let horaElegidaGlobal = "";
     let datosNube = []; 
+    let baseDeDatosActiva = false; // Nos dirá si Firebase prendió bien
 
-    // ESCUCHADOR EN TIEMPO REAL
-    db.collection("reservas").onSnapshot((snapshot) => {
-        datosNube = [];
-        snapshot.forEach((doc) => {
-            let data = doc.data();
-            data.id = doc.id;
-            datosNube.push(data);
-        });
-        
-        // Refrescar pantallas
-        if (!document.getElementById('pantalla-reserva').classList.contains('hidden')) {
-            generarGrillaHorarios();
-        }
-        if (!document.getElementById('pantalla-admin').classList.contains('hidden')) {
-            cargarGrillaAdmin();
-            cargarReservasAdmin();
-        }
-    });
-
-    // FUNCIONES GLOBALES
     function mostrarPantalla(tipo) {
         document.getElementById('pantalla-inicio').classList.add('hidden');
         document.getElementById('pantalla-reserva').classList.add('hidden');
@@ -418,111 +382,144 @@
             div.textContent = `${hInicio} (${estado})`;
 
             div.onclick = function() {
-                toggleBloqueoAdmin(dia, deporte, hInicio);
+                if(baseDeDatosActiva) {
+                    toggleBloqueoAdmin(dia, deporte, hInicio);
+                } else {
+                    alert("Firebase no está conectado. Sube esto a GitHub Pages para activar las reservas.");
+                }
             };
             grilla.appendChild(div);
         }
     }
+</script>
 
-    function enviarReserva(e) {
-        e.preventDefault();
-        let btn = document.querySelector('button[type="submit"]');
-        let nombre = document.getElementById('nombre').value;
-        let telefono = document.getElementById('telefono').value;
-        let deporte = document.getElementById('deporte').value;
-        let dia = document.getElementById('dia').value;
-        let duracion = document.getElementById('duracion').value;
-        let hora = document.getElementById('horaSeleccionada').value;
-        let fileInput = document.getElementById('voucher');
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-        if(!hora) { alert('Por favor selecciona un horario disponible en la grilla.'); return; }
+<script>
+    try {
+        const firebaseConfig = {
+            apiKey: "AIzaSyBkjnbA_s9PhcL5KZ8MZrChL7-Snsx5QuQ",
+            authDomain: "sportalreservas.firebaseapp.com",
+            projectId: "sportalreservas",
+            storageBucket: "sportalreservas.firebasestorage.app",
+            messagingSenderId: "14937539841",
+            appId: "1:14937539841:web:956dab26ca06c575dfc700"
+        };
 
-        if(fileInput.files && fileInput.files[0]) {
-            btn.textContent = "Procesando...";
-            btn.disabled = true;
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        baseDeDatosActiva = true;
 
-            let reader = new FileReader();
-            reader.onload = function(e) {
+        // Escuchador en tiempo real
+        db.collection("reservas").onSnapshot((snapshot) => {
+            datosNube = [];
+            snapshot.forEach((doc) => {
+                let data = doc.data();
+                data.id = doc.id;
+                datosNube.push(data);
+            });
+            
+            if (!document.getElementById('pantalla-reserva').classList.contains('hidden')) { generarGrillaHorarios(); }
+            if (!document.getElementById('pantalla-admin').classList.contains('hidden')) { cargarGrillaAdmin(); cargarReservasAdmin(); }
+        });
+
+        // Enviar Formulario
+        window.enviarReserva = function(e) {
+            e.preventDefault();
+            if(!baseDeDatosActiva) { alert("Sube el archivo a GitHub Pages para que Firebase funcione."); return; }
+
+            let btn = document.querySelector('button[type="submit"]');
+            let nombre = document.getElementById('nombre').value;
+            let telefono = document.getElementById('telefono').value;
+            let deporte = document.getElementById('deporte').value;
+            let dia = document.getElementById('dia').value;
+            let duracion = document.getElementById('duracion').value;
+            let hora = document.getElementById('horaSeleccionada').value;
+            let fileInput = document.getElementById('voucher');
+
+            if(!hora) { alert('Por favor selecciona un horario disponible.'); return; }
+
+            if(fileInput.files && fileInput.files[0]) {
+                btn.textContent = "Procesando...";
+                btn.disabled = true;
+
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    db.collection("reservas").add({
+                        nombre: nombre,
+                        telefono: telefono,
+                        deporte: deporte,
+                        diaDeporteHora: `${dia} - ${deporte} - ${hora}`,
+                        duracion: `${duracion} hora(s)`,
+                        voucher: e.target.result,
+                        estado: 'pendiente'
+                    }).then(() => {
+                        alert('¡Reserva enviada!');
+                        document.getElementById('formReserva').reset();
+                        volverInicio();
+                        btn.textContent = "Enviar Reserva";
+                        btn.disabled = false;
+                    });
+                }
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        }
+
+        // Bloqueo y Desbloqueo Admin
+        window.toggleBloqueoAdmin = function(dia, deporte, hora) {
+            let bloqueStr = `${dia} - ${deporte} - ${hora}`;
+            let reservaMatch = datosNube.find(r => r.diaDeporteHora === bloqueStr);
+
+            if(reservaMatch) {
+                db.collection("reservas").doc(reservaMatch.id).delete();
+            } else {
                 db.collection("reservas").add({
-                    nombre: nombre,
-                    telefono: telefono,
-                    deporte: deporte,
-                    diaDeporteHora: `${dia} - ${deporte} - ${hora}`,
-                    duracion: `${duracion} hora(s)`,
-                    voucher: e.target.result,
-                    estado: 'pendiente'
-                }).then(() => {
-                    alert('¡Reserva enviada con éxito! Está pendiente de aprobación.');
-                    document.getElementById('formReserva').reset();
-                    volverInicio();
-                    btn.textContent = "Enviar Reserva";
-                    btn.disabled = false;
-                }).catch((error) => {
-                    alert('Hubo un error. Revisa tu internet o los permisos de Firebase.');
-                    console.error(error);
-                    btn.textContent = "Enviar Reserva";
-                    btn.disabled = false;
+                    nombre: "BLOQUEADO", telefono: "-", deporte: deporte,
+                    diaDeporteHora: bloqueStr, duracion: "1 hora", voucher: "", estado: 'bloqueado'
                 });
             }
-            reader.readAsDataURL(fileInput.files[0]);
         }
-    }
 
-    function toggleBloqueoAdmin(dia, deporte, hora) {
-        let bloqueStr = `${dia} - ${deporte} - ${hora}`;
-        let reservaMatch = datosNube.find(r => r.diaDeporteHora === bloqueStr);
+        // Cargar Tabla Admin
+        window.cargarReservasAdmin = function() {
+            let tbody = document.getElementById('tablaAdmin');
+            tbody.innerHTML = '';
+            
+            if(datosNube.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay registros en la nube.</td></tr>';
+                return;
+            }
 
-        if(reservaMatch) {
-            db.collection("reservas").doc(reservaMatch.id).delete();
-        } else {
-            db.collection("reservas").add({
-                nombre: "BLOQUEADO (Admin)",
-                telefono: "-",
-                deporte: deporte,
-                diaDeporteHora: bloqueStr,
-                duracion: "1 hora",
-                voucher: "",
-                estado: 'bloqueado'
+            datosNube.forEach((res) => {
+                let colorEstado = res.estado === 'aceptado' ? 'var(--success-color)' : (res.estado === 'bloqueado' ? '#64748b' : 'var(--warning-color)');
+                let voucherHtml = res.voucher ? `<a href="${res.voucher}" target="_blank" style="color: var(--accent-color);">Ver Voucher</a>` : 'Manual';
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${res.nombre}</strong><br><span style="color: #38bdf8;">📞 ${res.telefono || 'N/A'}</span></td>
+                    <td>${res.deporte}</td>
+                    <td>${res.diaDeporteHora}</td>
+                    <td><span style="color: ${colorEstado}; font-weight:bold;">${res.estado}</span><br>${voucherHtml}</td>
+                    <td>
+                        ${res.estado === 'pendiente' ? `<button class="btn" style="padding:4px 8px;font-size:11px;background:var(--success-color);color:white;margin-bottom:4px;" onclick="cambiarEstado('${res.id}', 'aceptado')">Aceptar</button>` : ''}
+                        <button class="btn btn-secondary" style="padding:4px 8px;font-size:11px;background-color:var(--danger-color);color:white;" onclick="eliminarReserva('${res.id}')">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         }
-    }
 
-    function cargarReservasAdmin() {
-        let tbody = document.getElementById('tablaAdmin');
-        tbody.innerHTML = '';
-        
-        if(datosNube.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay registros en la nube.</td></tr>';
-            return;
+        window.cambiarEstado = function(idFirebase, nuevoEstado) {
+            db.collection("reservas").doc(idFirebase).update({ estado: nuevoEstado });
         }
 
-        datosNube.forEach((res) => {
-            let colorEstado = res.estado === 'aceptado' ? 'var(--success-color)' : (res.estado === 'bloqueado' ? '#64748b' : 'var(--warning-color)');
-            let voucherHtml = res.voucher ? `<a href="${res.voucher}" target="_blank" style="color: var(--accent-color);">Ver Voucher</a>` : 'Bloqueo Manual';
-
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${res.nombre}</strong><br><span style="color: #38bdf8;">📞 ${res.telefono || 'N/A'}</span></td>
-                <td>${res.deporte}</td>
-                <td>${res.diaDeporteHora}</td>
-                <td><span style="color: ${colorEstado}; font-weight:bold; text-transform:uppercase;">${res.estado}</span><br>${voucherHtml}</td>
-                <td>
-                    ${res.estado === 'pendiente' ? `<button class="btn" style="padding: 4px 8px; font-size: 11px; background: var(--success-color); color:white; margin-bottom:4px;" onclick="cambiarEstado('${res.id}', 'aceptado')">Aceptar</button>` : ''}
-                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; background-color: var(--danger-color); color: white;" onclick="eliminarReserva('${res.id}')">Eliminar</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function cambiarEstado(idFirebase, nuevoEstado) {
-        db.collection("reservas").doc(idFirebase).update({ estado: nuevoEstado });
-    }
-
-    function eliminarReserva(idFirebase) {
-        if(confirm("¿Seguro que deseas eliminar esto permanentemente?")) {
-            db.collection("reservas").doc(idFirebase).delete();
+        window.eliminarReserva = function(idFirebase) {
+            if(confirm("¿Seguro que deseas eliminar esto permanentemente?")) {
+                db.collection("reservas").doc(idFirebase).delete();
+            }
         }
+    } catch(error) {
+        console.warn("Firebase bloqueado localmente. Se conectará cuando subas a GitHub Pages.");
     }
 </script>
 
